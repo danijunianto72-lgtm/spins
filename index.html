@@ -1,0 +1,3084 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>GroupSplit — Member &amp; Group Organizer</title>
+  <!-- Font Inter via Google Fonts dengan fallback system-ui penuh -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Library jsPDF & jsPDF-AutoTable untuk Ekspor Dokumen PDF A4 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
+
+  <style>
+    /* ==========================================================================
+       1. CSS VARIABLES & DESIGN TOKENS
+       ========================================================================== */
+    :root {
+      --bg-page: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-muted: #e2e8f0;
+      --bg-accent-subtle: #eff6ff;
+      --bg-warning-subtle: #fffbeb;
+      --bg-danger-subtle: #fef2f2;
+      --bg-success-subtle: #f0fdf4;
+
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --text-on-accent: #ffffff;
+
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-active: #1e40af;
+      --accent-border: #bfdbfe;
+
+      --warning: #b45309;
+      --warning-border: #fde68a;
+      --danger: #dc2626;
+      --danger-hover: #b91c1c;
+      --danger-border: #fecaca;
+      --success: #15803d;
+
+      --border-color: #e2e8f0;
+      --border-strong: #cbd5e1;
+
+      --radius-sm: 5px;
+      --radius-md: 7px;
+      --radius-lg: 9px;
+
+      --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+      --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+      --transition-fast: 140ms ease;
+      --touch-target: 44px;
+    }
+
+    /* ==========================================================================
+       2. RESET & BASE STYLES
+       ========================================================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px;
+      -webkit-text-size-adjust: 100%;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      line-height: 1.5;
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding-bottom: env(safe-area-inset-bottom, 16px);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, select, textarea {
+      font-family: inherit;
+      font-size: 1rem; /* Mencegah auto-zoom pada iOS Safari */
+      color: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      background: none;
+      border: none;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    svg {
+      display: block;
+      flex-shrink: 0;
+    }
+
+    /* ==========================================================================
+       3. LAYOUT & HEADER
+       ========================================================================== */
+    .app-header {
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 30;
+    }
+
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+    }
+
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      background-color: var(--text-primary);
+      color: var(--text-on-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-text h1 {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      line-height: 1.2;
+    }
+
+    .brand-text p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .app-main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1rem;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+      align-items: start;
+    }
+
+    @media (min-width: 960px) {
+      .header-inner {
+        padding: 0.75rem 1.5rem;
+      }
+      .app-main {
+        padding: 1.5rem;
+        grid-template-columns: clamp(340px, 31vw, 410px) minmax(0, 1fr);
+        gap: 1.5rem;
+      }
+      .sidebar-panel {
+        position: sticky;
+        top: 4.5rem;
+      }
+    }
+
+    /* ==========================================================================
+       4. PANELS & FORM CONTROLS
+       ========================================================================== */
+    .panel {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-xs);
+    }
+
+    .panel-section {
+      padding: 1.125rem;
+    }
+
+    .panel-section + .panel-section {
+      border-top: 1px solid var(--border-color);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .section-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .counter-pill {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.125rem 0.5rem;
+      border-radius: var(--radius-sm);
+      background-color: var(--bg-subtle);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+    }
+
+    .quick-links {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.625rem;
+    }
+
+    .btn-link {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background-color: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      padding: 0.35rem 0.625rem;
+      border-radius: var(--radius-sm);
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    }
+
+    .btn-link:hover {
+      background-color: var(--bg-muted);
+      color: var(--text-primary);
+    }
+
+    .textarea-wrapper {
+      position: relative;
+    }
+
+    .member-textarea {
+      width: 100%;
+      min-height: 210px;
+      max-height: 400px;
+      resize: vertical;
+      padding: 0.75rem;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      background-color: var(--bg-surface);
+      font-family: var(--font-mono);
+      font-size: 1rem; /* >= 16px agar iOS tidak auto-zoom */
+      line-height: 1.55;
+      color: var(--text-primary);
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    @media (min-width: 960px) {
+      .member-textarea {
+        font-size: 0.875rem;
+        min-height: 230px;
+      }
+    }
+
+    .member-textarea:focus,
+    .input-number:focus,
+    .search-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+    }
+
+    .helper-text {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.45rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    /* Banner Peringatan Duplikat */
+    .duplicate-alert {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      border-radius: var(--radius-md);
+      background-color: var(--bg-warning-subtle);
+      border: 1px solid var(--warning-border);
+      color: var(--warning);
+      font-size: 0.8125rem;
+    }
+
+    .duplicate-alert[hidden] {
+      display: none !important;
+    }
+
+    .duplicate-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+
+    .duplicate-title {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    .duplicate-list {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      word-break: break-word;
+      margin-bottom: 0.5rem;
+      color: #92400e;
+    }
+
+    .btn-dedup {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.375rem 0.65rem;
+      min-height: 34px;
+      border-radius: var(--radius-sm);
+      background-color: #ffffff;
+      border: 1px solid var(--warning-border);
+      color: var(--warning);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: background-color var(--transition-fast);
+    }
+
+    .btn-dedup:hover {
+      background-color: #fef3c7;
+    }
+
+    /* ==========================================================================
+       5. DIVISION CONTROLS
+       ========================================================================== */
+    .form-group {
+      margin-bottom: 0.875rem;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 0.4rem;
+    }
+
+    .segmented-control {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.375rem;
+      background-color: var(--bg-subtle);
+      padding: 0.25rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+    }
+
+    @media (min-width: 420px) {
+      .segmented-control {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .segment-btn {
+      min-height: var(--touch-target);
+      padding: 0.5rem 0.625rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-align: center;
+      transition: background-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    .segment-btn[aria-pressed="true"] {
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+      font-weight: 600;
+      box-shadow: var(--shadow-xs);
+    }
+
+    .number-input-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .input-number {
+      width: 100%;
+      min-height: var(--touch-target);
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      background-color: var(--bg-surface);
+      font-family: var(--font-mono);
+      font-weight: 500;
+    }
+
+    .stepper-btn {
+      min-width: var(--touch-target);
+      min-height: var(--touch-target);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color var(--transition-fast);
+    }
+
+    .stepper-btn:hover:not(:disabled) {
+      background-color: var(--bg-subtle);
+    }
+
+    .preview-distribution {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      background-color: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 0.5rem 0.65rem;
+      margin-bottom: 0.875rem;
+      line-height: 1.45;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      min-height: var(--touch-target);
+      padding: 0.375rem 0.625rem;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      user-select: none;
+      margin-bottom: 0.875rem;
+      transition: background-color var(--transition-fast);
+    }
+
+    .checkbox-row:hover {
+      background-color: var(--bg-subtle);
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .checkbox-label-text {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    /* ==========================================================================
+       6. BUTTONS
+       ========================================================================== */
+    .btn {
+      min-height: var(--touch-target);
+      padding: 0.5rem 0.875rem;
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      width: 100%;
+      background-color: var(--accent);
+      color: var(--text-on-accent);
+      font-weight: 600;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-color: var(--accent-hover);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      background-color: var(--accent-active);
+    }
+
+    .btn-secondary {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background-color: var(--bg-subtle);
+    }
+
+    .btn-danger-outline {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--danger-border);
+      color: var(--danger);
+    }
+
+    .btn-danger-outline:hover:not(:disabled) {
+      background-color: var(--bg-danger-subtle);
+    }
+
+    .btn-danger-solid {
+      background-color: var(--danger);
+      color: #ffffff;
+    }
+
+    .btn-danger-solid:hover:not(:disabled) {
+      background-color: var(--danger-hover);
+    }
+
+    .btn-sm {
+      min-height: 36px;
+      padding: 0.375rem 0.65rem;
+      font-size: 0.8125rem;
+    }
+
+    @media (max-width: 767px) {
+      .btn-sm {
+        min-height: var(--touch-target);
+      }
+    }
+
+    /* ==========================================================================
+       7. RESULTS WORKSPACE, STATS & TOOLBAR
+       ========================================================================== */
+    .results-column {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      min-width: 0;
+    }
+
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.625rem;
+    }
+
+    @media (min-width: 640px) {
+      .stats-bar {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    .stat-item {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 0.875rem;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 0.2rem;
+    }
+
+    .stat-value {
+      font-family: var(--font-mono);
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+
+    .stat-note {
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+    }
+
+    .results-toolbar {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 0.875rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .toolbar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 639px) {
+      .toolbar-group {
+        width: 100%;
+      }
+      .toolbar-group .btn {
+        flex: 1 1 calc(50% - 0.25rem);
+      }
+    }
+
+    .search-box {
+      position: relative;
+      flex: 1 1 220px;
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .search-input {
+      width: 100%;
+      min-height: 38px;
+      padding: 0.4rem 0.75rem 0.4rem 2.25rem;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      font-size: 1rem;
+      background-color: var(--bg-surface);
+    }
+
+    @media (min-width: 960px) {
+      .search-input {
+        font-size: 0.8125rem;
+      }
+    }
+
+    /* ==========================================================================
+       8. HIERARCHICAL GROUP TREE & ITEMS
+       ========================================================================== */
+    .empty-state {
+      background-color: var(--bg-surface);
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 3rem 1.25rem;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    .empty-icon {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 0.75rem;
+      color: var(--text-muted);
+      background-color: var(--bg-subtle);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .empty-state h2 {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.35rem;
+    }
+
+    .empty-state p {
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    /* Grid Kelompok Tingkat Utama */
+    .groups-root-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.875rem;
+    }
+
+    @media (min-width: 720px) {
+      .groups-root-list {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      }
+    }
+
+    /* Apabila sebuah kelompok telah di-subdivisi, tampilkan full-width agar hierarki jelas */
+    .group-node.is-subdivided {
+      grid-column: 1 / -1;
+    }
+
+    .group-node {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      transition: border-color var(--transition-fast);
+    }
+
+    .group-node[data-level="1"] {
+      border-left: 3px solid var(--accent);
+    }
+
+    .group-node[data-level="2"] {
+      border-left: 3px solid #0d9488;
+    }
+
+    .group-node[data-level="3"],
+    .group-node[data-level="4"] {
+      border-left: 3px solid #6366f1;
+    }
+
+    .group-header {
+      padding: 0.75rem 0.875rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+      background-color: var(--bg-surface);
+      border-top-left-radius: var(--radius-md);
+      border-top-right-radius: var(--radius-md);
+    }
+
+    .group-node.is-subdivided > .group-header {
+      background-color: var(--bg-subtle);
+    }
+
+    .group-title-wrap {
+      min-width: 0;
+    }
+
+    .group-title-row {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+
+    .group-name {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .level-tag {
+      font-size: 0.6875rem;
+      font-weight: 500;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      background-color: var(--bg-subtle);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+    }
+
+    .level-tag.tag-sub {
+      background-color: var(--bg-accent-subtle);
+      color: var(--accent);
+      border-color: var(--accent-border);
+    }
+
+    .group-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+    }
+
+    .group-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      flex-shrink: 0;
+    }
+
+    .icon-action-btn {
+      min-height: 36px;
+      padding: 0.35rem 0.6rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    }
+
+    @media (max-width: 767px) {
+      .icon-action-btn {
+        min-height: var(--touch-target);
+        padding: 0.45rem 0.7rem;
+      }
+    }
+
+    .icon-action-btn:hover:not(:disabled) {
+      background-color: var(--bg-subtle);
+      color: var(--text-primary);
+      border-color: var(--border-strong);
+    }
+
+    .icon-action-btn.btn-subsplit {
+      color: var(--accent);
+      border-color: var(--accent-border);
+      background-color: var(--bg-accent-subtle);
+    }
+
+    .icon-action-btn.btn-subsplit:hover:not(:disabled) {
+      background-color: #dbeafe;
+    }
+
+    /* Form Inline "Bagi Lagi" pada Kelompok */
+    .subsplit-panel {
+      padding: 0.875rem;
+      background-color: var(--bg-subtle);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .subsplit-panel[hidden] {
+      display: none !important;
+    }
+
+    .subsplit-title {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      margin-bottom: 0.625rem;
+      color: var(--text-primary);
+    }
+
+    .subsplit-controls {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.625rem;
+    }
+
+    @media (min-width: 540px) {
+      .subsplit-controls {
+        grid-template-columns: 1.3fr 1fr;
+      }
+    }
+
+    .subsplit-select,
+    .subsplit-input {
+      width: 100%;
+      min-height: 40px;
+      padding: 0.45rem 0.65rem;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      background-color: var(--bg-surface);
+      font-size: 1rem;
+    }
+
+    @media (min-width: 960px) {
+      .subsplit-select,
+      .subsplit-input {
+        font-size: 0.8125rem;
+      }
+    }
+
+    .subsplit-footer {
+      margin-top: 0.625rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .subsplit-shuffle-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      min-height: 36px;
+    }
+
+    .subsplit-btn-group {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* Daftar Anggota dalam Kelompok */
+    .member-list {
+      list-style: none;
+      padding: 0.5rem 0.875rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .member-item {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      padding: 0.3rem 0.4rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      color: var(--text-primary);
+    }
+
+    .member-item:nth-child(even) {
+      background-color: var(--bg-page);
+    }
+
+    .member-item.is-highlighted {
+      background-color: #fef08a;
+      font-weight: 600;
+    }
+
+    .member-index {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      min-width: 1.5rem;
+      text-align: right;
+      user-select: none;
+    }
+
+    .member-name {
+      word-break: break-word;
+    }
+
+    /* Kontainer Subkelompok (Hierarki Tanpa Deep Card Nesting Berlebihan) */
+    .subgroups-wrapper {
+      padding: 0.875rem;
+      background-color: var(--bg-page);
+      border-bottom-left-radius: var(--radius-md);
+      border-bottom-right-radius: var(--radius-md);
+    }
+
+    .subgroups-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+
+    @media (min-width: 680px) {
+      .subgroups-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      }
+    }
+
+    /* Ringkasan anggota induk yang dapat dibuka-tutup jika sudah dibagi */
+    .parent-members-details {
+      padding: 0.5rem 0.875rem;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      background-color: var(--bg-surface);
+    }
+
+    .parent-members-details summary {
+      cursor: pointer;
+      font-weight: 500;
+      user-select: none;
+      padding: 0.2rem 0;
+    }
+
+    .parent-inline-members {
+      margin-top: 0.4rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* ==========================================================================
+       9. MODAL KONFIRMASI & TOAST NOTIFICATION
+       ========================================================================== */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(15, 23, 42, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      z-index: 100;
+    }
+
+    .modal-backdrop[hidden] {
+      display: none !important;
+    }
+
+    .modal-dialog {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      max-width: 420px;
+      width: 100%;
+      padding: 1.25rem;
+    }
+
+    .modal-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .modal-desc {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: 1.25rem;
+      line-height: 1.5;
+    }
+
+    .modal-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    .toast-container {
+      position: fixed;
+      bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+      right: 1rem;
+      left: 1rem;
+      z-index: 90;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.5rem;
+      pointer-events: none;
+    }
+
+    .toast {
+      pointer-events: auto;
+      background-color: var(--text-primary);
+      color: #ffffff;
+      padding: 0.65rem 0.9rem;
+      border-radius: var(--radius-md);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      box-shadow: var(--shadow-md);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      max-width: 100%;
+    }
+
+    .toast.toast-error {
+      background-color: var(--danger);
+    }
+
+    /* ==========================================================================
+       10. PRINT STYLES (@media print A4)
+       ========================================================================== */
+    .print-only-header {
+      display: none;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 15mm;
+    }
+
+    @media print {
+      body {
+        background-color: #ffffff;
+        color: #000000;
+        padding: 0;
+      }
+
+      .app-header,
+      .sidebar-panel,
+      .results-toolbar,
+      .group-actions,
+      .subsplit-panel,
+      .toast-container,
+      .modal-backdrop {
+        display: none !important;
+      }
+
+      .app-main {
+        display: block;
+        padding: 0;
+        max-width: 100%;
+      }
+
+      .print-only-header {
+        display: block;
+        margin-bottom: 12pt;
+        padding-bottom: 8pt;
+        border-bottom: 1.5pt solid #000000;
+      }
+
+      .print-only-header h1 {
+        font-size: 14pt;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .print-only-header p {
+        font-size: 9pt;
+        color: #334155;
+        margin-top: 3pt;
+      }
+
+      .stats-bar {
+        grid-template-columns: repeat(4, 1fr);
+        margin-bottom: 12pt;
+      }
+
+      .stat-item {
+        border: 1px solid #94a3b8;
+        padding: 6pt 8pt;
+      }
+
+      .groups-root-list {
+        display: block;
+      }
+
+      .group-node {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        margin-bottom: 10pt;
+        border: 1px solid #94a3b8;
+      }
+
+      .group-node.is-subdivided {
+        break-inside: auto;
+        page-break-inside: auto;
+      }
+
+      .subgroups-grid {
+        display: block;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER APLIKASI -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+            <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+            <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+            <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>GroupSplit</h1>
+          <p>Member &amp; Recursive Group Organizer</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button type="button" id="btnClearAllData" class="btn btn-danger-outline btn-sm" title="Hapus seluruh data anggota dan hasil dari penyimpanan browser">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          <span>Hapus Seluruh Data</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- KONTEN UTAMA -->
+  <main class="app-main">
+
+    <!-- PANEL KIRI: INPUT ANGGOTA & PENGATURAN PEMBAGIAN -->
+    <aside class="panel sidebar-panel" aria-label="Input Anggota dan Pengaturan Pembagian">
+
+      <!-- SEKSI 1: INPUT ANGGOTA -->
+      <section class="panel-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <span>Daftar Anggota</span>
+          </h2>
+          <span id="memberCountBadge" class="counter-pill">0 anggota</span>
+        </div>
+
+        <div class="quick-links">
+          <button type="button" id="btnSample50" class="btn-link">Muat 50 Nama</button>
+          <button type="button" id="btnSample100" class="btn-link">Muat 100 Nama</button>
+          <button type="button" id="btnClearInput" class="btn-link">Kosongkan</button>
+        </div>
+
+        <div class="textarea-wrapper">
+          <textarea
+            id="memberTextarea"
+            class="member-textarea"
+            placeholder="Masukkan daftar nama anggota (pisahkan dengan ENTER)&#10;Contoh:&#10;anton&#10;intan&#10;budi&#10;siti&#10;andi"
+            spellcheck="false"
+            aria-label="Daftar nama anggota dipisahkan dengan baris baru"
+          ></textarea>
+        </div>
+
+        <div class="helper-text">
+          <span>Baris kosong &amp; spasi berlebih diabaikan otomatis.</span>
+        </div>
+
+        <!-- Peringatan Duplikat Nama -->
+        <div id="duplicateAlert" class="duplicate-alert" role="status" aria-live="polite" hidden>
+          <div class="duplicate-header">
+            <span class="duplicate-title">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              <span id="duplicateSummaryText">Terdeteksi nama duplikat</span>
+            </span>
+          </div>
+          <div id="duplicateListText" class="duplicate-list"></div>
+          <button type="button" id="btnRemoveDuplicates" class="btn-dedup">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>Hapus Duplikat (Pertahankan Urutan)</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- SEKSI 2: METODE PEMBAGIAN -->
+      <section class="panel-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="4" y1="21" x2="4" y2="14"></line>
+              <line x1="4" y1="10" x2="4" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12" y2="3"></line>
+              <line x1="20" y1="21" x2="20" y2="16"></line>
+              <line x1="20" y1="12" x2="20" y2="3"></line>
+              <line x1="1" y1="14" x2="7" y2="14"></line>
+              <line x1="9" y1="8" x2="15" y2="8"></line>
+              <line x1="17" y1="16" x2="23" y2="16"></line>
+            </svg>
+            <span>Pengaturan Pembagian</span>
+          </h2>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Metode Pembagian</label>
+          <div class="segmented-control" role="group" aria-label="Pilih metode pembagian">
+            <button type="button" id="modeByGroups" class="segment-btn" data-mode="by_groups" aria-pressed="true">
+              Jumlah Kelompok
+            </button>
+            <button type="button" id="modeBySize" class="segment-btn" data-mode="by_size" aria-pressed="false">
+              Jumlah Anggota
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label id="splitValueLabel" for="splitValueInput" class="form-label">Target Jumlah Kelompok</label>
+          <div class="number-input-row">
+            <button type="button" id="btnDecValue" class="stepper-btn" aria-label="Kurangi nilai">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <input
+              type="number"
+              id="splitValueInput"
+              class="input-number"
+              min="1"
+              max="500"
+              value="5"
+              inputmode="numeric"
+            >
+            <button type="button" id="btnIncValue" class="stepper-btn" aria-label="Tambah nilai">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div id="distributionPreview" class="preview-distribution" aria-live="polite">
+          Masukkan minimal 2 anggota untuk melihat estimasi distribusi kelompok.
+        </div>
+
+        <label class="checkbox-row" for="shuffleCheckbox">
+          <input type="checkbox" id="shuffleCheckbox" checked>
+          <span class="checkbox-label-text">Acak urutan anggota (Shuffle)</span>
+        </label>
+
+        <button type="button" id="btnGenerateGroups" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 3 21 3 21 8"></polyline>
+            <line x1="4" y1="20" x2="21" y2="3"></line>
+            <polyline points="21 16 21 21 16 21"></polyline>
+            <line x1="15" y1="15" x2="21" y2="21"></line>
+            <line x1="4" y1="4" x2="9" y2="9"></line>
+          </svg>
+          <span>Bagi Kelompok Sekarang</span>
+        </button>
+      </section>
+    </aside>
+
+    <!-- PANEL KANAN: STATISTIK, TOOLBAR & HASIL KELOMPOK -->
+    <section class="results-column" aria-label="Hasil Pembagian Kelompok">
+
+      <!-- HEADER KHUSUS CETAK (PRINT VIEW) -->
+      <div class="print-only-header">
+        <h1>HASIL PEMBAGIAN KELOMPOK</h1>
+        <p id="printTimestampText">Dicetak melalui GroupSplit — Member &amp; Group Organizer</p>
+      </div>
+
+      <!-- STATISTIK RINGKAS (Anti Double-Count) -->
+      <div class="stats-bar" aria-label="Statistik Kelompok">
+        <div class="stat-item">
+          <div class="stat-label">Total Anggota</div>
+          <div id="statTotalMembers" class="stat-value">0</div>
+          <div class="stat-note">Tanpa hitung ganda</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Kelompok Utama</div>
+          <div id="statMainGroups" class="stat-value">0</div>
+          <div class="stat-note">Tingkat induk (Lvl 0)</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Subkelompok</div>
+          <div id="statSubGroups" class="stat-value">0</div>
+          <div class="stat-note">Hasil bagi bertingkat</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Kelompok Aktif</div>
+          <div id="statLeafGroups" class="stat-value">0</div>
+          <div class="stat-note">Kelompok akhir saat ini</div>
+        </div>
+      </div>
+
+      <!-- TOOLBAR HASIL PEMBAGIAN -->
+      <div class="results-toolbar">
+        <div class="toolbar-row">
+          <div class="search-box">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input
+              type="search"
+              id="searchMemberInput"
+              class="search-input"
+              placeholder="Cari nama anggota atau kode kelompok..."
+              aria-label="Cari nama anggota atau kelompok"
+            >
+          </div>
+
+          <div class="toolbar-group">
+            <button type="button" id="btnUndo" class="btn btn-secondary btn-sm" disabled title="Batalkan pembagian terakhir">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7v6h6"></path>
+                <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path>
+              </svg>
+              <span id="undoBtnText">Undo</span>
+            </button>
+
+            <button type="button" id="btnResetGroups" class="btn btn-secondary btn-sm" disabled title="Reset hasil pembagian kelompok">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 2v6h-6"></path>
+                <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+                <path d="M3 22v-6h6"></path>
+                <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+              </svg>
+              <span>Reset Pembagian</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="toolbar-row">
+          <div class="toolbar-group">
+            <button type="button" id="btnCopyAll" class="btn btn-secondary btn-sm" disabled>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span>Salin Semua</span>
+            </button>
+
+            <button type="button" id="btnDownloadTxt" class="btn btn-secondary btn-sm" disabled>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="12" y1="18" x2="12" y2="12"></line>
+                <polyline points="9 15 12 18 15 15"></polyline>
+              </svg>
+              <span>Download TXT</span>
+            </button>
+
+            <button type="button" id="btnExportPdf" class="btn btn-secondary btn-sm" disabled>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <path d="M9 15h6"></path>
+                <path d="M9 11h6"></path>
+              </svg>
+              <span>Export PDF</span>
+            </button>
+
+            <button type="button" id="btnPrint" class="btn btn-secondary btn-sm" disabled>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                <rect x="6" y="14" width="12" height="8"></rect>
+              </svg>
+              <span>Cetak</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KONTAINER HASIL KELOMPOK -->
+      <div id="resultsContainer" aria-live="polite">
+        <div class="empty-state">
+          <div class="empty-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+              <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+              <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+              <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+            </svg>
+          </div>
+          <h2>Belum Ada Pembagian Kelompok</h2>
+          <p>Masukkan daftar nama anggota di panel kiri, pilih metode pembagian, lalu klik tombol <strong>Bagi Kelompok Sekarang</strong>.</p>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- MODAL KONFIRMASI KUSTOM (TANPA WINDOW.CONFIRM / ALERT) -->
+  <div id="confirmModalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle" hidden>
+    <div class="modal-dialog">
+      <h3 id="confirmModalTitle" class="modal-title">Konfirmasi Tindakan</h3>
+      <p id="confirmModalDesc" class="modal-desc"></p>
+      <div class="modal-actions">
+        <button type="button" id="btnModalCancel" class="btn btn-secondary btn-sm">Batal</button>
+        <button type="button" id="btnModalConfirm" class="btn btn-danger-solid btn-sm">Ya, Lanjutkan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KONTAINER NOTIFIKASI TOAST -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <!-- SCRIPT APLIKASI VANILLA JAVASCRIPT MODULAR -->
+  <script>
+    (function () {
+      'use strict';
+
+      /* ========================================================================
+         1. KONSTANTA & DATA CONTOH
+         ======================================================================== */
+      const STORAGE_KEY = 'groupsplit_app_state_v1';
+      const MAX_HISTORY = 25;
+
+      const SAMPLE_NAMES_50 = [
+        'Aditya Pratama', 'Intan Permata', 'Budi Santoso', 'Siti Nurhaliza', 'Andi Wijaya',
+        'Dewi Lestari', 'Reza Rahadian', 'Nabila Putri', 'Fajar Nugroho', 'Rina Kartika',
+        'Bayu Setiawan', 'Ayu Tingting', 'Dimas Anggara', 'Putri Marino', 'Hendra Gunawan',
+        'Maya Sari', 'Rizky Febian', 'Tiara Andini', 'Arif Muhammad', 'Citra Kirana',
+        'Gilang Dirga', 'Lesti Kejora', 'Taufik Hidayat', 'Raisa Andriana', 'Iqbaal Ramadhan',
+        'Maudy Ayunda', 'Dian Sastrowardoyo', 'Nicholas Saputra', 'Prilly Latuconsina', 'Refal Hady',
+        'kurniawan Dwi', 'Anisa Rahma', 'Bagus Kahfi', 'winda Puspita', 'Chiko Jerikho',
+        'Chelsea Islan', 'vino Bastian', 'Marsha Timothy', 'Yuki Kato', 'Verrell Bramasta',
+        'Natasha Wilona', 'Raffi Ahmad', 'Nagita Slavina', 'Deddy Mizwar', 'Surya Saputra',
+        'Shandy Aulia', 'Baim Wong', 'Paula Verhoeven', 'Desta Mahendra', 'Vincent Rompies'
+      ];
+
+      /* ========================================================================
+         2. SINGLE SOURCE OF TRUTH (STATE)
+         ======================================================================== */
+      const State = {
+        rawInput: '',
+        members: [],
+        duplicates: [],
+        settings: {
+          mode: 'by_groups', // 'by_groups' | 'by_size'
+          value: 5,
+          shuffle: true
+        },
+        // Pohon kelompok disimpan sebagai Map terindeks + urutan rootIds
+        groupsById: {},
+        rootIds: [],
+        // Stack riwayat untuk fitur Undo pembagian bertingkat
+        history: [],
+        searchQuery: '',
+        idCounter: 1
+      };
+
+      /* ========================================================================
+         3. UTILITAS ALGORITMA PEMBAGIAN & MANIPULASI DATA
+         ======================================================================== */
+      const Utils = {
+        /**
+         * Mengurai input textarea menjadi array nama bersih dan daftar duplikat
+         */
+        parseRawMembers(rawText) {
+          const lines = rawText.split(/\r?\n/);
+          const members = [];
+          const counts = new Map();
+          const originalCaseMap = new Map();
+
+          for (let i = 0; i < lines.length; i++) {
+            const trimmed = lines[i].trim();
+            if (!trimmed) continue;
+            members.push(trimmed);
+
+            const key = trimmed.toLowerCase();
+            counts.set(key, (counts.get(key) || 0) + 1);
+            if (!originalCaseMap.has(key)) {
+              originalCaseMap.set(key, trimmed);
+            }
+          }
+
+          const duplicates = [];
+          counts.forEach((count, key) => {
+            if (count > 1) {
+              duplicates.push({
+                name: originalCaseMap.get(key),
+                count: count
+              });
+            }
+          });
+
+          return { members, duplicates };
+        },
+
+        /**
+         * Menghapus nama duplikat dengan tetap mempertahankan urutan kemunculan pertama
+         */
+        deduplicateMembers(rawText) {
+          const lines = rawText.split(/\r?\n/);
+          const seen = new Set();
+          const unique = [];
+
+          for (let i = 0; i < lines.length; i++) {
+            const trimmed = lines[i].trim();
+            if (!trimmed) continue;
+            const key = trimmed.toLowerCase();
+            if (!seen.has(key)) {
+              seen.add(key);
+              unique.push(trimmed);
+            }
+          }
+          return unique.join('\n');
+        },
+
+        /**
+         * Algoritma pengacakan Fisher-Yates (tidak mengubah array asli)
+         */
+        shuffleArray(arr) {
+          const copy = arr.slice();
+          for (let i = copy.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const temp = copy[i];
+            copy[i] = copy[j];
+            copy[j] = temp;
+          }
+          return copy;
+        },
+
+        /**
+         * Konversi indeks (0, 1, 2...) ke label alfabet (A, B, C... Z, AA, AB...)
+         */
+        indexToAlpha(index, lowercase = false) {
+          let n = index;
+          let result = '';
+          while (n >= 0) {
+            result = String.fromCharCode((n % 26) + 65) + result;
+            n = Math.floor(n / 26) - 1;
+          }
+          return lowercase ? result.toLowerCase() : result;
+        },
+
+        /**
+         * Membentuk kode subkelompok hierarkis yang konsisten:
+         * Level 0: "1", "2", "3"
+         * Level 1: "1A", "1B"
+         * Level 2: "1A-1", "1A-2"
+         * Level 3: "1A-1a", "1A-1b"
+         */
+        buildChildCode(parentCode, parentLevel, childIndex) {
+          if (parentLevel === 0) {
+            return parentCode + Utils.indexToAlpha(childIndex, false);
+          }
+          if (parentLevel % 2 === 1) {
+            return parentCode + '-' + (childIndex + 1);
+          }
+          return parentCode + Utils.indexToAlpha(childIndex, true);
+        },
+
+        /**
+         * Algoritma distribusi anggota yang adil dan merata (tanpa anggota hilang/ganda).
+         * Mengembalikan array 2D berisi daftar anggota tiap kelompok.
+         */
+        partitionMembers(membersList, mode, rawValue, shouldShuffle) {
+          const total = membersList.length;
+          if (total === 0) return [];
+
+          const pool = shouldShuffle ? Utils.shuffleArray(membersList) : membersList.slice();
+          const val = Math.max(1, parseInt(rawValue, 10) || 1);
+
+          let groupCount = 1;
+          if (mode === 'by_groups') {
+            groupCount = Math.min(val, total);
+          } else {
+            // Berdasarkan jumlah anggota per kelompok -> distribusikan merata
+            groupCount = Math.ceil(total / val);
+            groupCount = Math.min(Math.max(1, groupCount), total);
+          }
+
+          const baseSize = Math.floor(total / groupCount);
+          const remainder = total % groupCount;
+
+          const buckets = [];
+          let cursor = 0;
+
+          for (let i = 0; i < groupCount; i++) {
+            const size = baseSize + (i < remainder ? 1 : 0);
+            buckets.push(pool.slice(cursor, cursor + size));
+            cursor += size;
+          }
+
+          return buckets;
+        },
+
+        /**
+         * Menghasilkan teks estimasi distribusi sebelum pembagian dijalankan
+         */
+        describeDistribution(totalMembers, mode, rawValue) {
+          if (totalMembers < 2) {
+            return 'Masukkan minimal 2 anggota untuk melihat estimasi distribusi kelompok.';
+          }
+          const val = Math.max(1, parseInt(rawValue, 10) || 1);
+          let groupCount = mode === 'by_groups' ? Math.min(val, totalMembers) : Math.ceil(totalMembers / val);
+          groupCount = Math.min(Math.max(1, groupCount), totalMembers);
+
+          const baseSize = Math.floor(totalMembers / groupCount);
+          const remainder = totalMembers % groupCount;
+
+          if (remainder === 0) {
+            return `Akan menghasilkan ${groupCount} kelompok dengan masing-masing ${baseSize} anggota.`;
+          }
+          const largerCount = remainder;
+          const smallerCount = groupCount - remainder;
+          return `Akan menghasilkan ${groupCount} kelompok (${largerCount} kelompok berisi ${baseSize + 1} anggota, dan ${smallerCount} kelompok berisi ${baseSize} anggota).`;
+        },
+
+        /**
+         * Menghitung statistik kelompok secara akurat tanpa menghitung ganda anggota induk
+         */
+        calculateStats(groupsById, rootIds) {
+          let totalMembers = 0;
+          const mainGroups = rootIds.length;
+          let subGroups = 0;
+          let leafGroups = 0;
+
+          const ids = Object.keys(groupsById);
+          for (let i = 0; i < ids.length; i++) {
+            const g = groupsById[ids[i]];
+            if (!g) continue;
+            if (g.level > 0) {
+              subGroups++;
+            }
+            const isLeaf = !g.childrenIds || g.childrenIds.length === 0;
+            if (isLeaf) {
+              leafGroups++;
+              totalMembers += g.members.length;
+            }
+          }
+
+          return {
+            totalMembers,
+            mainGroups,
+            subGroups,
+            leafGroups
+          };
+        },
+
+        /**
+         * Kloning state kelompok secara mendalam untuk keperluan Undo
+         */
+        cloneGroupState() {
+          return {
+            groupsById: JSON.parse(JSON.stringify(State.groupsById)),
+            rootIds: State.rootIds.slice(),
+            idCounter: State.idCounter
+          };
+        },
+
+        /**
+         * Menyalin teks ke clipboard dengan fallback execCommand
+         */
+        copyTextToClipboard(text) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text).catch(() => Utils.fallbackCopy(text));
+          }
+          return Promise.resolve(Utils.fallbackCopy(text));
+        },
+
+        fallbackCopy(text) {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.left = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          try {
+            document.execCommand('copy');
+          } finally {
+            document.body.removeChild(ta);
+          }
+        },
+
+        /**
+         * Format tanggal & waktu Bahasa Indonesia
+         */
+        formatTimestamp(dateObj) {
+          return new Intl.DateTimeFormat('id-ID', {
+            dateStyle: 'long',
+            timeStyle: 'short'
+          }).format(dateObj);
+        }
+      };
+
+      /* ========================================================================
+         4. PENYIMPANAN LOCALSTORAGE
+         ======================================================================== */
+      const Storage = {
+        save() {
+          try {
+            const payload = {
+              rawInput: State.rawInput,
+              settings: State.settings,
+              groupsById: State.groupsById,
+              rootIds: State.rootIds,
+              history: State.history,
+              idCounter: State.idCounter
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+          } catch (err) {
+            // Abaikan jika storage penuh atau diblokir mode privat
+          }
+        },
+
+        load() {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return false;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') return false;
+
+            State.rawInput = typeof parsed.rawInput === 'string' ? parsed.rawInput : '';
+            if (parsed.settings && typeof parsed.settings === 'object') {
+              State.settings.mode = parsed.settings.mode === 'by_size' ? 'by_size' : 'by_groups';
+              State.settings.value = Math.max(1, parseInt(parsed.settings.value, 10) || 5);
+              State.settings.shuffle = Boolean(parsed.settings.shuffle);
+            }
+            State.groupsById = parsed.groupsById && typeof parsed.groupsById === 'object' ? parsed.groupsById : {};
+            State.rootIds = Array.isArray(parsed.rootIds) ? parsed.rootIds : [];
+            State.history = Array.isArray(parsed.history) ? parsed.history.slice(-MAX_HISTORY) : [];
+            State.idCounter = typeof parsed.idCounter === 'number' ? parsed.idCounter : 1;
+            return true;
+          } catch (err) {
+            return false;
+          }
+        },
+
+        clear() {
+          try {
+            localStorage.removeItem(STORAGE_KEY);
+          } catch (err) {
+            // Abaikan
+          }
+        }
+      };
+
+      /* ========================================================================
+         5. MANAJEMEN OPERASI KELOMPOK (TREE & REKURSIF)
+         ======================================================================== */
+      const GroupManager = {
+        pushHistory() {
+          if (State.rootIds.length === 0) return;
+          State.history.push(Utils.cloneGroupState());
+          if (State.history.length > MAX_HISTORY) {
+            State.history.shift();
+          }
+        },
+
+        /**
+         * Pembagian awal (Top-level / Kelompok Utama)
+         */
+        generateInitialGroups() {
+          if (State.members.length < 2) {
+            UI.showToast('Masukkan minimal 2 nama anggota terlebih dahulu.', true);
+            return;
+          }
+
+          if (State.rootIds.length > 0) {
+            GroupManager.pushHistory();
+          }
+
+          const buckets = Utils.partitionMembers(
+            State.members,
+            State.settings.mode,
+            State.settings.value,
+            State.settings.shuffle
+          );
+
+          const newGroupsById = {};
+          const newRootIds = [];
+
+          for (let i = 0; i < buckets.length; i++) {
+            const code = String(i + 1);
+            const id = 'grp_' + (State.idCounter++);
+            newGroupsById[id] = {
+              id: id,
+              parentId: null,
+              level: 0,
+              code: code,
+              name: 'Kelompok ' + code,
+              members: buckets[i],
+              childrenIds: []
+            };
+            newRootIds.push(id);
+          }
+
+          State.groupsById = newGroupsById;
+          State.rootIds = newRootIds;
+          Storage.save();
+          UI.renderAllResults();
+          UI.showToast(`Berhasil membagi ${State.members.length} anggota ke dalam ${buckets.length} kelompok utama.`);
+        },
+
+        /**
+         * Pembagian bertingkat (rekursif) pada satu kelompok tertentu.
+         * Hanya memperbarui node DOM kelompok terkait tanpa merender ulang seluruh halaman.
+         */
+        subdivideGroup(groupId, mode, rawValue, shouldShuffle) {
+          const parentGroup = State.groupsById[groupId];
+          if (!parentGroup) return;
+
+          if (parentGroup.members.length < 2) {
+            UI.showToast('Kelompok ini tidak memiliki cukup anggota untuk dibagi lagi.', true);
+            return;
+          }
+
+          const numVal = Math.max(2, parseInt(rawValue, 10) || 2);
+          if (mode === 'by_groups' && numVal > parentGroup.members.length) {
+            UI.showToast(`Jumlah subkelompok maksimal untuk kelompok ini adalah ${parentGroup.members.length}.`, true);
+            return;
+          }
+
+          const buckets = Utils.partitionMembers(parentGroup.members, mode, numVal, shouldShuffle);
+          if (buckets.length < 2) {
+            UI.showToast('Pengaturan tersebut hanya menghasilkan 1 kelompok. Kurangi jumlah anggota per subkelompok.', true);
+            return;
+          }
+
+          GroupManager.pushHistory();
+
+          const childIds = [];
+          for (let i = 0; i < buckets.length; i++) {
+            const childCode = Utils.buildChildCode(parentGroup.code, parentGroup.level, i);
+            const childId = 'grp_' + (State.idCounter++);
+            State.groupsById[childId] = {
+              id: childId,
+              parentId: parentGroup.id,
+              level: parentGroup.level + 1,
+              code: childCode,
+              name: 'Kelompok ' + childCode,
+              members: buckets[i],
+              childrenIds: []
+            };
+            childIds.push(childId);
+          }
+
+          parentGroup.childrenIds = childIds;
+          Storage.save();
+
+          // Update hanya node DOM kelompok ini (Targeted DOM Replacement)
+          UI.replaceSingleGroupNode(groupId);
+          UI.updateStatsAndToolbar();
+          UI.showToast(`${parentGroup.name} berhasil dibagi menjadi ${childIds.length} subkelompok.`);
+        },
+
+        /**
+         * Menggabungkan kembali subkelompok ke kelompok induknya
+         */
+        mergeSubgroupsBack(groupId) {
+          const parentGroup = State.groupsById[groupId];
+          if (!parentGroup || !parentGroup.childrenIds || parentGroup.childrenIds.length === 0) return;
+
+          GroupManager.pushHistory();
+
+          const removeDescendants = (id) => {
+            const node = State.groupsById[id];
+            if (!node) return;
+            if (Array.isArray(node.childrenIds)) {
+              for (let i = 0; i < node.childrenIds.length; i++) {
+                removeDescendants(node.childrenIds[i]);
+                delete State.groupsById[node.childrenIds[i]];
+              }
+            }
+          };
+
+          removeDescendants(groupId);
+          parentGroup.childrenIds = [];
+          Storage.save();
+
+          UI.replaceSingleGroupNode(groupId);
+          UI.updateStatsAndToolbar();
+          UI.showToast(`Subkelompok pada ${parentGroup.name} telah digabungkan kembali.`);
+        },
+
+        /**
+         * Membatalkan aksi pembagian terakhir (Undo)
+         */
+        undoLastAction() {
+          if (State.history.length === 0) return;
+          const prev = State.history.pop();
+          State.groupsById = prev.groupsById;
+          State.rootIds = prev.rootIds;
+          State.idCounter = prev.idCounter;
+          Storage.save();
+          UI.renderAllResults();
+          UI.showToast('Pembagian terakhir berhasil dibatalkan (Undo).');
+        },
+
+        /**
+         * Mereset seluruh pembagian kelompok
+         */
+        resetAllGroups() {
+          State.groupsById = {};
+          State.rootIds = [];
+          State.history = [];
+          Storage.save();
+          UI.renderAllResults();
+          UI.showToast('Hasil pembagian kelompok telah direset.');
+        }
+      };
+
+      /* ========================================================================
+         6. EKSPOR DATA (CLIPBOARD, TXT, DAN DOKUMEN PDF A4)
+         ======================================================================== */
+      const Exporter = {
+        /**
+         * Mengumpulkan seluruh node kelompok secara berurutan (Depth-First Pre-Order)
+         */
+        getFlattenedHierarchy() {
+          const list = [];
+          const traverse = (id) => {
+            const g = State.groupsById[id];
+            if (!g) return;
+            list.push(g);
+            if (Array.isArray(g.childrenIds)) {
+              for (let i = 0; i < g.childrenIds.length; i++) {
+                traverse(g.childrenIds[i]);
+              }
+            }
+          };
+          for (let i = 0; i < State.rootIds.length; i++) {
+            traverse(State.rootIds[i]);
+          }
+          return list;
+        },
+
+        /**
+         * Membangun teks satu kelompok untuk tombol Salin Kelompok
+         */
+        formatSingleGroupText(groupId) {
+          const g = State.groupsById[groupId];
+          if (!g) return '';
+          const lines = [];
+          lines.push(`${g.name} (${g.members.length} anggota)`);
+          for (let i = 0; i < g.members.length; i++) {
+            lines.push(`${i + 1}. ${g.members[i]}`);
+          }
+          return lines.join('\n');
+        },
+
+        /**
+         * Membangun teks lengkap seluruh hierarki untuk Salin Semua & Download TXT
+         */
+        formatFullReportText() {
+          const stats = Utils.calculateStats(State.groupsById, State.rootIds);
+          const nowStr = Utils.formatTimestamp(new Date());
+          const lines = [];
+
+          lines.push('====================================================');
+          lines.push('             HASIL PEMBAGIAN KELOMPOK               ');
+          lines.push('====================================================');
+          lines.push(`Waktu Ekspor    : ${nowStr}`);
+          lines.push(`Total Anggota   : ${stats.totalMembers} orang`);
+          lines.push(`Kelompok Utama  : ${stats.mainGroups} kelompok`);
+          lines.push(`Subkelompok     : ${stats.subGroups} subkelompok`);
+          lines.push(`Kelompok Aktif  : ${stats.leafGroups} kelompok akhir`);
+          lines.push('====================================================');
+          lines.push('');
+
+          const allNodes = Exporter.getFlattenedHierarchy();
+          for (let i = 0; i < allNodes.length; i++) {
+            const g = allNodes[i];
+            const indent = '  '.repeat(g.level);
+            const prefix = g.level > 0 ? '↳ ' : '';
+            const hasChildren = g.childrenIds && g.childrenIds.length > 0;
+            const parentObj = g.parentId ? State.groupsById[g.parentId] : null;
+            const parentNote = parentObj ? ` [Sub dari ${parentObj.name}]` : '';
+
+            if (hasChildren) {
+              lines.push(`${indent}${prefix}${g.name.toUpperCase()}${parentNote} — (${g.members.length} anggota, dibagi menjadi ${g.childrenIds.length} subkelompok)`);
+            } else {
+              lines.push(`${indent}${prefix}${g.name.toUpperCase()}${parentNote} (${g.members.length} anggota)`);
+              for (let m = 0; m < g.members.length; m++) {
+                lines.push(`${indent}   ${m + 1}. ${g.members[m]}`);
+              }
+            }
+            lines.push('');
+          }
+
+          return lines.join('\n');
+        },
+
+        /**
+         * Mengunduh laporan dalam format .TXT
+         */
+        downloadTxt() {
+          if (State.rootIds.length === 0) return;
+          const content = Exporter.formatFullReportText();
+          const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          const dateSlug = new Date().toISOString().slice(0, 10);
+          link.href = url;
+          link.download = `Hasil-Pembagian-Kelompok-${dateSlug}.txt`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          UI.showToast('File TXT berhasil diunduh.');
+        },
+
+        /**
+         * Mengekspor seluruh struktur kelompok beserta subkelompok ke dalam file PDF A4
+         * menggunakan jsPDF & jsPDF-AutoTable.
+         */
+        exportToPdf() {
+          if (State.rootIds.length === 0) return;
+
+          if (!window.jspdf || !window.jspdf.jsPDF) {
+            UI.showToast('Library PDF belum siap. Membuka dialog cetak A4 sebagai alternatif...', true);
+            window.print();
+            return;
+          }
+
+          try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+              orientation: 'portrait',
+              unit: 'mm',
+              format: 'a4'
+            });
+
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 15;
+            const usableWidth = pageWidth - margin * 2;
+
+            const stats = Utils.calculateStats(State.groupsById, State.rootIds);
+            const exportTime = Utils.formatTimestamp(new Date());
+
+            // 1. Judul Dokumen
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.setTextColor(15, 23, 42);
+            doc.text('HASIL PEMBAGIAN KELOMPOK', margin, 18);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(71, 85, 105);
+            doc.text(`Diekspor pada: ${exportTime}`, margin, 24);
+
+            // 2. Tabel Ringkasan Statistik di Bagian Awal
+            doc.autoTable({
+              startY: 28,
+              margin: { left: margin, right: margin },
+              head: [['Total Anggota', 'Kelompok Utama', 'Total Subkelompok', 'Kelompok Akhir (Aktif)']],
+              body: [[
+                `${stats.totalMembers} Orang`,
+                `${stats.mainGroups} Kelompok`,
+                `${stats.subGroups} Subkelompok`,
+                `${stats.leafGroups} Kelompok`
+              ]],
+              theme: 'grid',
+              headStyles: {
+                fillColor: [241, 245, 249],
+                textColor: [15, 23, 42],
+                fontStyle: 'bold',
+                fontSize: 8.5,
+                lineColor: [203, 213, 225],
+                lineWidth: 0.2
+              },
+              bodyStyles: {
+                textColor: [15, 23, 42],
+                fontStyle: 'bold',
+                fontSize: 9.5,
+                lineColor: [203, 213, 225],
+                lineWidth: 0.2
+              }
+            });
+
+            let currentY = doc.lastAutoTable.finalY + 8;
+
+            // 3. Iterasi Seluruh Struktur Kelompok & Subkelompok Secara Berurutan
+            const hierarchy = Exporter.getFlattenedHierarchy();
+
+            for (let i = 0; i < hierarchy.length; i++) {
+              const g = hierarchy[i];
+              const isSubdivided = g.childrenIds && g.childrenIds.length > 0;
+              const parentGroup = g.parentId ? State.groupsById[g.parentId] : null;
+              const indentMm = Math.min(g.level * 5, 25);
+              const leftMargin = margin + indentMm;
+
+              // Cek apakah perlu halaman baru untuk header kelompok
+              if (currentY > pageHeight - 32) {
+                doc.addPage();
+                currentY = 18;
+              }
+
+              const levelLabel = g.level === 0
+                ? 'Kelompok Utama'
+                : `Subkelompok Tingkat ${g.level} (Induk: ${parentGroup ? parentGroup.name : '-'})`;
+
+              const statusNote = isSubdivided
+                ? ` — Dibagi menjadi ${g.childrenIds.length} subkelompok`
+                : '';
+
+              const groupHeaderTitle = `${g.name.toUpperCase()}  |  ${g.members.length} Anggota  |  ${levelLabel}${statusNote}`;
+
+              // Buat baris nomor dan nama anggota
+              const memberRows = [];
+              for (let m = 0; m < g.members.length; m++) {
+                memberRows.push([String(m + 1), g.members[m]]);
+              }
+
+              doc.autoTable({
+                startY: currentY,
+                margin: { left: leftMargin, right: margin },
+                head: [[
+                  {
+                    content: groupHeaderTitle,
+                    colSpan: 2,
+                    styles: {
+                      fillColor: g.level === 0 ? [30, 41, 59] : [37, 99, 235],
+                      textColor: [255, 255, 255],
+                      fontStyle: 'bold',
+                      fontSize: 9
+                    }
+                  }
+                ]],
+                body: memberRows,
+                theme: 'grid',
+                pageBreak: 'auto',
+                rowPageBreak: 'avoid',
+                columnStyles: {
+                  0: { cellWidth: 12, halign: 'right', textColor: [100, 116, 139] },
+                  1: { cellWidth: usableWidth - indentMm - 12 }
+                },
+                bodyStyles: {
+                  fontSize: 8.75,
+                  textColor: [15, 23, 42],
+                  cellPadding: { top: 1.8, right: 3, bottom: 1.8, left: 3 },
+                  lineColor: [226, 232, 240],
+                  lineWidth: 0.15
+                },
+                alternateRowStyles: {
+                  fillColor: [248, 250, 252]
+                }
+              });
+
+              currentY = doc.lastAutoTable.finalY + 5;
+            }
+
+            // 4. Tambahkan Nomor Halaman pada Setiap Halaman ("Halaman X dari Y")
+            const totalPages = doc.internal.getNumberOfPages();
+            for (let p = 1; p <= totalPages; p++) {
+              doc.setPage(p);
+              doc.setFont('helvetica', 'normal');
+              doc.setFontSize(8);
+              doc.setTextColor(100, 116, 139);
+              doc.text(
+                'GroupSplit — Member & Group Organizer',
+                margin,
+                pageHeight - 8
+              );
+              doc.text(
+                `Halaman ${p} dari ${totalPages}`,
+                pageWidth - margin,
+                pageHeight - 8,
+                { align: 'right' }
+              );
+            }
+
+            const dateSlug = new Date().toISOString().slice(0, 10);
+            doc.save(`Hasil-Pembagian-Kelompok-${dateSlug}.pdf`);
+            UI.showToast('Dokumen PDF berhasil dibuat dan diunduh.');
+          } catch (error) {
+            UI.showToast('Gagal membuat dokumen PDF. Silakan coba fitur Cetak.', true);
+          }
+        }
+      };
+
+      /* ========================================================================
+         7. MANIPULASI DOM & ANTARMUKA PENGGUNA (UI)
+         ======================================================================== */
+      const DOM = {};
+
+      const UI = {
+        cacheElements() {
+          DOM.memberTextarea = document.getElementById('memberTextarea');
+          DOM.memberCountBadge = document.getElementById('memberCountBadge');
+          DOM.duplicateAlert = document.getElementById('duplicateAlert');
+          DOM.duplicateSummaryText = document.getElementById('duplicateSummaryText');
+          DOM.duplicateListText = document.getElementById('duplicateListText');
+          DOM.btnRemoveDuplicates = document.getElementById('btnRemoveDuplicates');
+
+          DOM.btnSample50 = document.getElementById('btnSample50');
+          DOM.btnSample100 = document.getElementById('btnSample100');
+          DOM.btnClearInput = document.getElementById('btnClearInput');
+          DOM.btnClearAllData = document.getElementById('btnClearAllData');
+
+          DOM.modeByGroups = document.getElementById('modeByGroups');
+          DOM.modeBySize = document.getElementById('modeBySize');
+          DOM.splitValueLabel = document.getElementById('splitValueLabel');
+          DOM.splitValueInput = document.getElementById('splitValueInput');
+          DOM.btnDecValue = document.getElementById('btnDecValue');
+          DOM.btnIncValue = document.getElementById('btnIncValue');
+          DOM.distributionPreview = document.getElementById('distributionPreview');
+          DOM.shuffleCheckbox = document.getElementById('shuffleCheckbox');
+          DOM.btnGenerateGroups = document.getElementById('btnGenerateGroups');
+
+          DOM.statTotalMembers = document.getElementById('statTotalMembers');
+          DOM.statMainGroups = document.getElementById('statMainGroups');
+          DOM.statSubGroups = document.getElementById('statSubGroups');
+          DOM.statLeafGroups = document.getElementById('statLeafGroups');
+
+          DOM.searchMemberInput = document.getElementById('searchMemberInput');
+          DOM.btnUndo = document.getElementById('btnUndo');
+          DOM.undoBtnText = document.getElementById('undoBtnText');
+          DOM.btnResetGroups = document.getElementById('btnResetGroups');
+          DOM.btnCopyAll = document.getElementById('btnCopyAll');
+          DOM.btnDownloadTxt = document.getElementById('btnDownloadTxt');
+          DOM.btnExportPdf = document.getElementById('btnExportPdf');
+          DOM.btnPrint = document.getElementById('btnPrint');
+
+          DOM.resultsContainer = document.getElementById('resultsContainer');
+          DOM.printTimestampText = document.getElementById('printTimestampText');
+
+          DOM.confirmModalBackdrop = document.getElementById('confirmModalBackdrop');
+          DOM.confirmModalTitle = document.getElementById('confirmModalTitle');
+          DOM.confirmModalDesc = document.getElementById('confirmModalDesc');
+          DOM.btnModalCancel = document.getElementById('btnModalCancel');
+          DOM.btnModalConfirm = document.getElementById('btnModalConfirm');
+
+          DOM.toastContainer = document.getElementById('toastContainer');
+        },
+
+        /**
+         * Membuat ikon SVG secara terprogram untuk efisiensi & kebersihan DOM
+         */
+        createSvgIcon(type) {
+          const ns = 'http://www.w3.org/2000/svg';
+          const svg = document.createElementNS(ns, 'svg');
+          svg.setAttribute('width', '14');
+          svg.setAttribute('height', '14');
+          svg.setAttribute('viewBox', '0 0 24 24');
+          svg.setAttribute('fill', 'none');
+          svg.setAttribute('stroke', 'currentColor');
+          svg.setAttribute('stroke-width', '2');
+          svg.setAttribute('stroke-linecap', 'round');
+          svg.setAttribute('stroke-linejoin', 'round');
+
+          if (type === 'copy') {
+            const rect = document.createElementNS(ns, 'rect');
+            rect.setAttribute('x', '9');
+            rect.setAttribute('y', '9');
+            rect.setAttribute('width', '13');
+            rect.setAttribute('height', '13');
+            rect.setAttribute('rx', '2');
+            rect.setAttribute('ry', '2');
+            const path = document.createElementNS(ns, 'path');
+            path.setAttribute('d', 'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1');
+            svg.append(rect, path);
+          } else if (type === 'split') {
+            const p1 = document.createElementNS(ns, 'path');
+            p1.setAttribute('d', 'M16 3h5v5');
+            const p2 = document.createElementNS(ns, 'path');
+            p2.setAttribute('d', 'M8 3H3v5');
+            const p3 = document.createElementNS(ns, 'path');
+            p3.setAttribute('d', 'M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3');
+            const p4 = document.createElementNS(ns, 'path');
+            p4.setAttribute('d', 'm15 9 6-6');
+            svg.append(p1, p2, p3, p4);
+          } else if (type === 'merge') {
+            const p1 = document.createElementNS(ns, 'path');
+            p1.setAttribute('d', 'm8 6 4-4 4 4');
+            const p2 = document.createElementNS(ns, 'path');
+            p2.setAttribute('d', 'M12 2v10.3a4 4 0 0 1-1.172 2.872L4 22');
+            const p3 = document.createElementNS(ns, 'path');
+            p3.setAttribute('d', 'm20 22-5-5');
+            svg.append(p1, p2, p3);
+          }
+
+          return svg;
+        },
+
+        /**
+         * Memperbarui perhitungan anggota real-time, deteksi duplikat, dan preview distribusi
+         */
+        syncInputState() {
+          State.rawInput = DOM.memberTextarea.value;
+          const parsed = Utils.parseRawMembers(State.rawInput);
+          State.members = parsed.members;
+          State.duplicates = parsed.duplicates;
+
+          DOM.memberCountBadge.textContent = `${State.members.length} anggota`;
+
+          if (State.duplicates.length > 0) {
+            DOM.duplicateAlert.hidden = false;
+            DOM.duplicateSummaryText.textContent = `Terdeteksi ${State.duplicates.length} nama duplikat`;
+            DOM.duplicateListText.textContent = State.duplicates
+              .map(d => `${d.name} (${d.count}x)`)
+              .join(', ');
+          } else {
+            DOM.duplicateAlert.hidden = true;
+            DOM.duplicateListText.textContent = '';
+          }
+
+          UI.syncDivisionControls();
+        },
+
+        /**
+         * Memperbarui tampilan kontrol metode pembagian dan pratinjau distribusi
+         */
+        syncDivisionControls() {
+          const isByGroups = State.settings.mode === 'by_groups';
+          DOM.modeByGroups.setAttribute('aria-pressed', String(isByGroups));
+          DOM.modeBySize.setAttribute('aria-pressed', String(!isByGroups));
+
+          DOM.splitValueLabel.textContent = isByGroups
+            ? 'Target Jumlah Kelompok'
+            : 'Target Anggota per Kelompok';
+
+          DOM.splitValueInput.value = String(State.settings.value);
+          DOM.shuffleCheckbox.checked = State.settings.shuffle;
+
+          DOM.distributionPreview.textContent = Utils.describeDistribution(
+            State.members.length,
+            State.settings.mode,
+            State.settings.value
+          );
+        },
+
+        /**
+         * Membangun elemen DOM untuk satu node kelompok beserta anak-anaknya (menggunakan textContent murni)
+         */
+        buildGroupNodeElement(groupId) {
+          const group = State.groupsById[groupId];
+          if (!group) return null;
+
+          const hasChildren = Array.isArray(group.childrenIds) && group.childrenIds.length > 0;
+          const query = State.searchQuery.trim().toLowerCase();
+
+          // Jika sedang melakukan pencarian, cek apakah kelompok ini atau keturunannya cocok
+          if (query && !UI.doesBranchMatchQuery(groupId, query)) {
+            return null;
+          }
+
+          const article = document.createElement('article');
+          article.className = 'group-node' + (hasChildren ? ' is-subdivided' : '');
+          article.dataset.groupId = group.id;
+          article.dataset.level = String(group.level);
+
+          // 1. Header Kelompok
+          const header = document.createElement('div');
+          header.className = 'group-header';
+
+          const titleWrap = document.createElement('div');
+          titleWrap.className = 'group-title-wrap';
+
+          const titleRow = document.createElement('div');
+          titleRow.className = 'group-title-row';
+
+          const nameHeading = document.createElement('h3');
+          nameHeading.className = 'group-name';
+          nameHeading.textContent = group.name;
+
+          const tag = document.createElement('span');
+          tag.className = 'level-tag' + (group.level > 0 ? ' tag-sub' : '');
+          tag.textContent = group.level === 0 ? 'Utama' : `Sub Lvl ${group.level}`;
+
+          titleRow.append(nameHeading, tag);
+
+          const meta = document.createElement('div');
+          meta.className = 'group-meta';
+          const parentObj = group.parentId ? State.groupsById[group.parentId] : null;
+          if (hasChildren) {
+            meta.textContent = `${group.members.length} anggota induk • Dibagi menjadi ${group.childrenIds.length} subkelompok`;
+          } else if (parentObj) {
+            meta.textContent = `${group.members.length} anggota • Bagian dari ${parentObj.name}`;
+          } else {
+            meta.textContent = `${group.members.length} anggota`;
+          }
+
+          titleWrap.append(titleRow, meta);
+
+          // Tombol Aksi Kelompok
+          const actions = document.createElement('div');
+          actions.className = 'group-actions';
+
+          const btnCopy = document.createElement('button');
+          btnCopy.type = 'button';
+          btnCopy.className = 'icon-action-btn';
+          btnCopy.dataset.action = 'copy-group';
+          btnCopy.dataset.groupId = group.id;
+          btnCopy.title = `Salin daftar anggota ${group.name}`;
+          const copyLabel = document.createElement('span');
+          copyLabel.textContent = 'Salin';
+          btnCopy.append(UI.createSvgIcon('copy'), copyLabel);
+          actions.appendChild(btnCopy);
+
+          if (!hasChildren && group.members.length >= 2) {
+            const btnSplit = document.createElement('button');
+            btnSplit.type = 'button';
+            btnSplit.className = 'icon-action-btn btn-subsplit';
+            btnSplit.dataset.action = 'toggle-subsplit';
+            btnSplit.dataset.groupId = group.id;
+            btnSplit.title = `Bagi ${group.name} menjadi subkelompok`;
+            const splitLabel = document.createElement('span');
+            splitLabel.textContent = 'Bagi Lagi';
+            btnSplit.append(UI.createSvgIcon('split'), splitLabel);
+            actions.appendChild(btnSplit);
+          } else if (hasChildren) {
+            const btnMerge = document.createElement('button');
+            btnMerge.type = 'button';
+            btnMerge.className = 'icon-action-btn';
+            btnMerge.dataset.action = 'merge-subgroups';
+            btnMerge.dataset.groupId = group.id;
+            btnMerge.title = `Gabungkan kembali subkelompok ke ${group.name}`;
+            const mergeLabel = document.createElement('span');
+            mergeLabel.textContent = 'Gabungkan';
+            btnMerge.append(UI.createSvgIcon('merge'), mergeLabel);
+            actions.appendChild(btnMerge);
+          }
+
+          header.append(titleWrap, actions);
+          article.appendChild(header);
+
+          // 2. Jika belum dibagi, sediakan panel inline "Bagi Lagi" + Daftar Anggota
+          if (!hasChildren) {
+            if (group.members.length >= 2) {
+              const subsplitPanel = UI.buildInlineSubsplitPanel(group);
+              article.appendChild(subsplitPanel);
+            }
+
+            const ul = document.createElement('ol');
+            ul.className = 'member-list';
+
+            for (let i = 0; i < group.members.length; i++) {
+              const memberName = group.members[i];
+              const li = document.createElement('li');
+              li.className = 'member-item';
+              if (query && memberName.toLowerCase().includes(query)) {
+                li.classList.add('is-highlighted');
+              }
+
+              const idxSpan = document.createElement('span');
+              idxSpan.className = 'member-index';
+              idxSpan.textContent = `${i + 1}.`;
+
+              const nameSpan = document.createElement('span');
+              nameSpan.className = 'member-name';
+              nameSpan.textContent = memberName; // Aman dari XSS
+
+              li.append(idxSpan, nameSpan);
+              ul.appendChild(li);
+            }
+
+            article.appendChild(ul);
+          } else {
+            // 3. Jika sudah dibagi, tampilkan ringkasan anggota induk (collapsible) & grid subkelompok
+            const details = document.createElement('details');
+            details.className = 'parent-members-details';
+            const summary = document.createElement('summary');
+            summary.textContent = `Lihat daftar ${group.members.length} anggota ${group.name} (sebelum dibagi)`;
+            const inlineMembers = document.createElement('div');
+            inlineMembers.className = 'parent-inline-members';
+            inlineMembers.textContent = group.members.map((m, i) => `${i + 1}. ${m}`).join('  •  ');
+            details.append(summary, inlineMembers);
+            article.appendChild(details);
+
+            const subWrapper = document.createElement('div');
+            subWrapper.className = 'subgroups-wrapper';
+            const subGrid = document.createElement('div');
+            subGrid.className = 'subgroups-grid';
+
+            for (let c = 0; c < group.childrenIds.length; c++) {
+              const childEl = UI.buildGroupNodeElement(group.childrenIds[c]);
+              if (childEl) {
+                subGrid.appendChild(childEl);
+              }
+            }
+
+            subWrapper.appendChild(subGrid);
+            article.appendChild(subWrapper);
+          }
+
+          return article;
+        },
+
+        /**
+         * Membangun panel inline untuk membagi suatu kelompok menjadi subkelompok
+         */
+        buildInlineSubsplitPanel(group) {
+          const panel = document.createElement('div');
+          panel.className = 'subsplit-panel';
+          panel.id = `subsplit_panel_${group.id}`;
+          panel.hidden = true;
+
+          const title = document.createElement('div');
+          title.className = 'subsplit-title';
+          title.textContent = `Bagi ${group.name} (${group.members.length} anggota) menjadi subkelompok:`;
+
+          const controls = document.createElement('div');
+          controls.className = 'subsplit-controls';
+
+          const selectMode = document.createElement('select');
+          selectMode.className = 'subsplit-select';
+          selectMode.dataset.role = 'subsplit-mode';
+          selectMode.setAttribute('aria-label', 'Metode pembagian subkelompok');
+
+          const optGroups = document.createElement('option');
+          optGroups.value = 'by_groups';
+          optGroups.textContent = 'Berdasarkan Jumlah Subkelompok';
+
+          const optSize = document.createElement('option');
+          optSize.value = 'by_size';
+          optSize.textContent = 'Berdasarkan Anggota per Subkelompok';
+
+          selectMode.append(optGroups, optSize);
+
+          const inputCount = document.createElement('input');
+          inputCount.type = 'number';
+          inputCount.className = 'subsplit-input';
+          inputCount.dataset.role = 'subsplit-value';
+          inputCount.min = '2';
+          inputCount.max = String(group.members.length);
+          inputCount.value = '2';
+          inputCount.setAttribute('aria-label', 'Nilai pembagian subkelompok');
+
+          controls.append(selectMode, inputCount);
+
+          const footer = document.createElement('div');
+          footer.className = 'subsplit-footer';
+
+          const shuffleLabel = document.createElement('label');
+          shuffleLabel.className = 'subsplit-shuffle-label';
+          const shuffleCheck = document.createElement('input');
+          shuffleCheck.type = 'checkbox';
+          shuffleCheck.dataset.role = 'subsplit-shuffle';
+          shuffleCheck.checked = State.settings.shuffle;
+          const shuffleSpan = document.createElement('span');
+          shuffleSpan.textContent = 'Acak anggota';
+          shuffleLabel.append(shuffleCheck, shuffleSpan);
+
+          const btnGroup = document.createElement('div');
+          btnGroup.className = 'subsplit-btn-group';
+
+          const btnCancel = document.createElement('button');
+          btnCancel.type = 'button';
+          btnCancel.className = 'btn btn-secondary btn-sm';
+          btnCancel.dataset.action = 'cancel-subsplit';
+          btnCancel.dataset.groupId = group.id;
+          btnCancel.textContent = 'Batal';
+
+          const btnConfirm = document.createElement('button');
+          btnConfirm.type = 'button';
+          btnConfirm.className = 'btn btn-primary btn-sm';
+          btnConfirm.style.width = 'auto';
+          btnConfirm.dataset.action = 'confirm-subsplit';
+          btnConfirm.dataset.groupId = group.id;
+          btnConfirm.textContent = 'Terapkan';
+
+          btnGroup.append(btnCancel, btnConfirm);
+          footer.append(shuffleLabel, btnGroup);
+
+          panel.append(title, controls, footer);
+          return panel;
+        },
+
+        /**
+         * Mengecek apakah kelompok atau subkelompoknya cocok dengan kata kunci pencarian
+         */
+        doesBranchMatchQuery(groupId, query) {
+          const g = State.groupsById[groupId];
+          if (!g) return false;
+          if (g.name.toLowerCase().includes(query) || g.code.toLowerCase().includes(query)) {
+            return true;
+          }
+          for (let i = 0; i < g.members.length; i++) {
+            if (g.members[i].toLowerCase().includes(query)) {
+              return true;
+            }
+          }
+          if (Array.isArray(g.childrenIds)) {
+            for (let c = 0; c < g.childrenIds.length; c++) {
+              if (UI.doesBranchMatchQuery(g.childrenIds[c], query)) {
+                return true;
+              }
+            }
+          }
+          return false;
+        },
+
+        /**
+         * Mengganti satu node kelompok pada DOM secara efisien menggunakan DocumentFragment
+         */
+        replaceSingleGroupNode(groupId) {
+          const existing = DOM.resultsContainer.querySelector(`.group-node[data-group-id="${groupId}"]`);
+          if (!existing) {
+            UI.renderAllResults();
+            return;
+          }
+          const fragment = document.createDocumentFragment();
+          const updatedNode = UI.buildGroupNodeElement(groupId);
+          if (updatedNode) {
+            fragment.appendChild(updatedNode);
+            existing.replaceWith(fragment);
+          } else {
+            UI.renderAllResults();
+          }
+        },
+
+        /**
+         * Merender seluruh pohon hasil kelompok menggunakan DocumentFragment
+         */
+        renderAllResults() {
+          UI.updateStatsAndToolbar();
+          DOM.resultsContainer.textContent = '';
+
+          if (State.rootIds.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'empty-state';
+
+            const iconWrap = document.createElement('div');
+            iconWrap.className = 'empty-icon';
+            iconWrap.appendChild(UI.createSvgIcon('split'));
+
+            const h2 = document.createElement('h2');
+            h2.textContent = 'Belum Ada Pembagian Kelompok';
+
+            const p = document.createElement('p');
+            p.textContent = 'Masukkan daftar nama anggota di panel kiri, pilih metode pembagian, lalu klik tombol Bagi Kelompok Sekarang.';
+
+            empty.append(iconWrap, h2, p);
+            DOM.resultsContainer.appendChild(empty);
+            return;
+          }
+
+          const fragment = document.createDocumentFragment();
+          const rootGrid = document.createElement('div');
+          rootGrid.className = 'groups-root-list';
+
+          let visibleCount = 0;
+          for (let i = 0; i < State.rootIds.length; i++) {
+            const nodeEl = UI.buildGroupNodeElement(State.rootIds[i]);
+            if (nodeEl) {
+              rootGrid.appendChild(nodeEl);
+              visibleCount++;
+            }
+          }
+
+          if (visibleCount === 0) {
+            const noMatch = document.createElement('div');
+            noMatch.className = 'empty-state';
+            const h2 = document.createElement('h2');
+            h2.textContent = 'Tidak Ditemukan Hasil yang Cocok';
+            const p = document.createElement('p');
+            p.textContent = 'Tidak ada nama anggota atau kelompok yang sesuai dengan kata kunci pencarian Anda.';
+            noMatch.append(h2, p);
+            DOM.resultsContainer.appendChild(noMatch);
+            return;
+          }
+
+          fragment.appendChild(rootGrid);
+          DOM.resultsContainer.appendChild(fragment);
+        },
+
+        /**
+         * Memperbarui angka statistik dan status aktif tombol-tombol pada toolbar
+         */
+        updateStatsAndToolbar() {
+          const stats = Utils.calculateStats(State.groupsById, State.rootIds);
+          DOM.statTotalMembers.textContent = String(stats.totalMembers);
+          DOM.statMainGroups.textContent = String(stats.mainGroups);
+          DOM.statSubGroups.textContent = String(stats.subGroups);
+          DOM.statLeafGroups.textContent = String(stats.leafGroups);
+
+          const hasResults = State.rootIds.length > 0;
+          const undoCount = State.history.length;
+
+          DOM.btnUndo.disabled = undoCount === 0;
+          DOM.undoBtnText.textContent = undoCount > 0 ? `Undo (${undoCount})` : 'Undo';
+
+          DOM.btnResetGroups.disabled = !hasResults;
+          DOM.btnCopyAll.disabled = !hasResults;
+          DOM.btnDownloadTxt.disabled = !hasResults;
+          DOM.btnExportPdf.disabled = !hasResults;
+          DOM.btnPrint.disabled = !hasResults;
+
+          DOM.printTimestampText.textContent = `Dicetak pada ${Utils.formatTimestamp(new Date())} • Total ${stats.totalMembers} anggota (${stats.mainGroups} kelompok utama, ${stats.subGroups} subkelompok)`;
+        },
+
+        /**
+         * Menampilkan modal konfirmasi kustom
+         */
+        confirmAction(title, description, onConfirmCallback) {
+          DOM.confirmModalTitle.textContent = title;
+          DOM.confirmModalDesc.textContent = description;
+          DOM.confirmModalBackdrop.hidden = false;
+
+          const cleanup = () => {
+            DOM.confirmModalBackdrop.hidden = true;
+            DOM.btnModalConfirm.onclick = null;
+            DOM.btnModalCancel.onclick = null;
+          };
+
+          DOM.btnModalConfirm.onclick = () => {
+            cleanup();
+            onConfirmCallback();
+          };
+
+          DOM.btnModalCancel.onclick = () => {
+            cleanup();
+          };
+        },
+
+        /**
+         * Menampilkan notifikasi toast singkat dan ringan
+         */
+        showToast(message, isError = false) {
+          const toast = document.createElement('div');
+          toast.className = 'toast' + (isError ? ' toast-error' : '');
+          toast.textContent = message;
+          DOM.toastContainer.appendChild(toast);
+
+          setTimeout(() => {
+            if (toast.parentNode) {
+              toast.parentNode.removeChild(toast);
+            }
+          }, 3200);
+        }
+      };
+
+      /* ========================================================================
+         8. EVENT LISTENERS & DELEGATION
+         ======================================================================== */
+      function bindEvents() {
+        // Input Textarea Anggota (Real-time)
+        DOM.memberTextarea.addEventListener('input', () => {
+          UI.syncInputState();
+          Storage.save();
+        });
+
+        // Tombol Hapus Duplikat
+        DOM.btnRemoveDuplicates.addEventListener('click', () => {
+          DOM.memberTextarea.value = Utils.deduplicateMembers(DOM.memberTextarea.value);
+          UI.syncInputState();
+          Storage.save();
+          UI.showToast('Nama duplikat berhasil dihapus.');
+        });
+
+        // Tombol Muat 50 Nama Contoh
+        DOM.btnSample50.addEventListener('click', () => {
+          DOM.memberTextarea.value = SAMPLE_NAMES_50.join('\n');
+          UI.syncInputState();
+          Storage.save();
+          UI.showToast('50 nama contoh berhasil dimuat.');
+        });
+
+        // Tombol Muat 100 Nama Contoh
+        DOM.btnSample100.addEventListener('click', () => {
+          const list100 = [];
+          for (let i = 0; i < 50; i++) {
+            list100.push(SAMPLE_NAMES_50[i] + ' A');
+            list100.push(SAMPLE_NAMES_50[i] + ' B');
+          }
+          DOM.memberTextarea.value = list100.join('\n');
+          UI.syncInputState();
+          Storage.save();
+          UI.showToast('100 nama contoh berhasil dimuat.');
+        });
+
+        // Tombol Kosongkan Input
+        DOM.btnClearInput.addEventListener('click', () => {
+          if (!DOM.memberTextarea.value.trim()) return;
+          DOM.memberTextarea.value = '';
+          UI.syncInputState();
+          Storage.save();
+          UI.showToast('Daftar input anggota dikosongkan.');
+        });
+
+        // Segmented Control Metode Pembagian
+        DOM.modeByGroups.addEventListener('click', () => {
+          State.settings.mode = 'by_groups';
+          UI.syncDivisionControls();
+          Storage.save();
+        });
+
+        DOM.modeBySize.addEventListener('click', () => {
+          State.settings.mode = 'by_size';
+          UI.syncDivisionControls();
+          Storage.save();
+        });
+
+        // Input Angka Pembagian & Stepper
+        DOM.splitValueInput.addEventListener('input', () => {
+          const val = Math.max(1, parseInt(DOM.splitValueInput.value, 10) || 1);
+          State.settings.value = val;
+          DOM.distributionPreview.textContent = Utils.describeDistribution(
+            State.members.length,
+            State.settings.mode,
+            State.settings.value
+          );
+          Storage.save();
+        });
+
+        DOM.btnDecValue.addEventListener('click', () => {
+          State.settings.value = Math.max(1, State.settings.value - 1);
+          UI.syncDivisionControls();
+          Storage.save();
+        });
+
+        DOM.btnIncValue.addEventListener('click', () => {
+          State.settings.value = Math.min(500, State.settings.value + 1);
+          UI.syncDivisionControls();
+          Storage.save();
+        });
+
+        // Checkbox Shuffle
+        DOM.shuffleCheckbox.addEventListener('change', () => {
+          State.settings.shuffle = DOM.shuffleCheckbox.checked;
+          Storage.save();
+        });
+
+        // Tombol Utama: Bagi Kelompok Sekarang
+        DOM.btnGenerateGroups.addEventListener('click', () => {
+          GroupManager.generateInitialGroups();
+        });
+
+        // Pencarian Anggota / Kelompok
+        DOM.searchMemberInput.addEventListener('input', () => {
+          State.searchQuery = DOM.searchMemberInput.value;
+          UI.renderAllResults();
+        });
+
+        // Toolbar: Undo
+        DOM.btnUndo.addEventListener('click', () => {
+          GroupManager.undoLastAction();
+        });
+
+        // Toolbar: Reset Pembagian (dengan konfirmasi)
+        DOM.btnResetGroups.addEventListener('click', () => {
+          if (State.rootIds.length === 0) return;
+          UI.confirmAction(
+            'Reset Hasil Pembagian?',
+            'Seluruh struktur kelompok dan subkelompok saat ini akan dihapus, namun daftar nama anggota di kotak input tetap tersimpan.',
+            () => GroupManager.resetAllGroups()
+          );
+        });
+
+        // Header: Hapus Seluruh Data (dengan konfirmasi)
+        DOM.btnClearAllData.addEventListener('click', () => {
+          UI.confirmAction(
+            'Hapus Seluruh Data Aplikasi?',
+            'Tindakan ini akan menghapus daftar nama anggota, seluruh hasil pembagian kelompok, dan riwayat penyimpanan pada browser Anda.',
+            () => {
+              State.rawInput = '';
+              State.members = [];
+              State.duplicates = [];
+              State.groupsById = {};
+              State.rootIds = [];
+              State.history = [];
+              State.searchQuery = '';
+              DOM.memberTextarea.value = '';
+              DOM.searchMemberInput.value = '';
+              Storage.clear();
+              UI.syncInputState();
+              UI.renderAllResults();
+              UI.showToast('Seluruh data aplikasi telah dihapus.');
+            }
+          );
+        });
+
+        // Toolbar: Salin Semua Hasil
+        DOM.btnCopyAll.addEventListener('click', () => {
+          if (State.rootIds.length === 0) return;
+          const text = Exporter.formatFullReportText();
+          Utils.copyTextToClipboard(text).then(() => {
+            UI.showToast('Seluruh hasil pembagian kelompok disalin ke clipboard.');
+          });
+        });
+
+        // Toolbar: Download TXT
+        DOM.btnDownloadTxt.addEventListener('click', () => {
+          Exporter.downloadTxt();
+        });
+
+        // Toolbar: Export PDF
+        DOM.btnExportPdf.addEventListener('click', () => {
+          Exporter.exportToPdf();
+        });
+
+        // Toolbar: Cetak
+        DOM.btnPrint.addEventListener('click', () => {
+          if (State.rootIds.length === 0) return;
+          UI.updateStatsAndToolbar();
+          window.print();
+        });
+
+        // Tutup modal ketika klik area backdrop atau tekan Escape
+        DOM.confirmModalBackdrop.addEventListener('click', (e) => {
+          if (e.target === DOM.confirmModalBackdrop) {
+            DOM.confirmModalBackdrop.hidden = true;
+          }
+        });
+
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !DOM.confirmModalBackdrop.hidden) {
+            DOM.confirmModalBackdrop.hidden = true;
+          }
+        });
+
+        // EVENT DELEGATION TUNGGAL PADA KONTAINER HASIL KELOMPOK
+        DOM.resultsContainer.addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+
+          const action = btn.dataset.action;
+          const groupId = btn.dataset.groupId;
+          if (!groupId) return;
+
+          if (action === 'copy-group') {
+            const text = Exporter.formatSingleGroupText(groupId);
+            const g = State.groupsById[groupId];
+            Utils.copyTextToClipboard(text).then(() => {
+              UI.showToast(`Daftar anggota ${g ? g.name : 'kelompok'} disalin.`);
+            });
+          } else if (action === 'toggle-subsplit') {
+            const panel = document.getElementById(`subsplit_panel_${groupId}`);
+            if (panel) {
+              panel.hidden = !panel.hidden;
+              if (!panel.hidden) {
+                const input = panel.querySelector('[data-role="subsplit-value"]');
+                if (input) input.focus();
+              }
+            }
+          } else if (action === 'cancel-subsplit') {
+            const panel = document.getElementById(`subsplit_panel_${groupId}`);
+            if (panel) panel.hidden = true;
+          } else if (action === 'confirm-subsplit') {
+            const panel = document.getElementById(`subsplit_panel_${groupId}`);
+            if (!panel) return;
+            const modeEl = panel.querySelector('[data-role="subsplit-mode"]');
+            const valEl = panel.querySelector('[data-role="subsplit-value"]');
+            const shuffleEl = panel.querySelector('[data-role="subsplit-shuffle"]');
+
+            const mode = modeEl ? modeEl.value : 'by_groups';
+            const val = valEl ? valEl.value : '2';
+            const shouldShuffle = shuffleEl ? shuffleEl.checked : false;
+
+            GroupManager.subdivideGroup(groupId, mode, val, shouldShuffle);
+          } else if (action === 'merge-subgroups') {
+            GroupManager.mergeSubgroupsBack(groupId);
+          }
+        });
+
+        // Dukungan tombol Enter pada input panel Bagi Lagi via Event Delegation
+        DOM.resultsContainer.addEventListener('keydown', (e) => {
+          if (e.key !== 'Enter') return;
+          const input = e.target.closest('[data-role="subsplit-value"]');
+          if (!input) return;
+          e.preventDefault();
+          const panel = input.closest('.subsplit-panel');
+          if (!panel) return;
+          const confirmBtn = panel.querySelector('button[data-action="confirm-subsplit"]');
+          if (confirmBtn) confirmBtn.click();
+        });
+      }
+
+      /* ========================================================================
+         9. INISIALISASI APLIKASI SAAT DOM SIAP
+         ======================================================================== */
+      function init() {
+        UI.cacheElements();
+        const restored = Storage.load();
+        if (restored) {
+          DOM.memberTextarea.value = State.rawInput;
+        }
+        UI.syncInputState();
+        UI.renderAllResults();
+        bindEvents();
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>
